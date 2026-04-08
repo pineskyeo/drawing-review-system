@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+data/cache/
+data/chroma_db/
+in_progress/
+*.dxf
+*.dwg
+.DS_Store
+reports/
+standards-vault/.obsidian/
