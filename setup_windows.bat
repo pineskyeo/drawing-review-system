@@ -37,13 +37,24 @@ if not exist "%PYZIP%" (
 
 if not exist "%PYDEST%" mkdir "%PYDEST%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%PYZIP%' -DestinationPath '%PYDEST%' -Force"
+REM Try multiple extraction methods for network drive compatibility
+REM Method 1: tar (Windows 10 1803+ built-in)
+tar -xf "%PYZIP%" -C "%PYDEST%" >nul 2>&1
+if exist "%PYDEST%\python.exe" goto :python_ok
 
-if not exist "%PYDEST%\python.exe" (
-    echo   [ERROR] Extraction failed.
-    pause
-    exit /b 1
-)
+REM Method 2: PowerShell with COM Shell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=New-Object -ComObject Shell.Application; $z=$s.NameSpace('%PYZIP%'); $d=$s.NameSpace('%PYDEST%'); $d.CopyHere($z.Items(),16)" >nul 2>&1
+if exist "%PYDEST%\python.exe" goto :python_ok
+
+REM Method 3: PowerShell Expand-Archive (may fail on network drives)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%PYZIP%' -DestinationPath '%PYDEST%' -Force" >nul 2>&1
+if exist "%PYDEST%\python.exe" goto :python_ok
+
+echo   [ERROR] Extraction failed. Try copying the project to C: drive.
+pause
+exit /b 1
+
+:python_ok
 echo   [OK] Python installed.
 
 REM === 3. Install pip ===
