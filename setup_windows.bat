@@ -37,7 +37,7 @@ if not exist "%PYZIP%" (
 
 if not exist "%PYDEST%" mkdir "%PYDEST%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath \"%PYZIP%\" -DestinationPath \"%PYDEST%\" -Force"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%PYZIP%' -DestinationPath '%PYDEST%' -Force"
 
 if not exist "%PYDEST%\python.exe" (
     echo   [ERROR] Extraction failed.
