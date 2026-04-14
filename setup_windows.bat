@@ -1,62 +1,56 @@
 @echo off
-chcp 65001 >nul 2>&1
-REM ============================================
-REM  도면 검토 시스템 - Windows 자동 설치
-REM  개발 지식 없이 더블클릭만 하면 됩니다
-REM ============================================
+setlocal enabledelayedexpansion
 
 echo.
 echo  ========================================
-echo   도면 검토 시스템 설치를 시작합니다
+echo   Drawing Review System - Setup
 echo  ========================================
 echo.
 
-REM 현재 폴더 기준으로 동작
 cd /d "%~dp0"
 
-REM === 1. Python 확인 ===
-echo [1/5] Python 확인 중...
+REM === 1. Check Python ===
+echo [1/5] Checking Python...
 
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    echo   [OK] Python이 이미 설치되어 있습니다.
+    echo   [OK] Python found.
     for /f "tokens=*" %%i in ('python --version') do echo   %%i
     goto :install_packages
 )
 
-REM Python 없으면 내장 ZIP으로 설치
-echo   Python이 없습니다. 내장 Python을 설치합니다...
+echo   Python not found. Installing from embedded ZIP...
 echo.
 
-REM === 2. 내장 Python ZIP 풀기 ===
-echo [2/5] Python 압축 해제 중...
+REM === 2. Extract Python ZIP ===
+echo [2/5] Extracting Python...
 
 set "PYZIP=%~dp0tools\python-win64\python-3.12.8-embed-amd64.zip"
 set "PYDEST=%~dp0python"
 
 if not exist "%PYZIP%" (
-    echo   [ERROR] Python ZIP 파일이 없습니다.
-    echo   프로젝트를 다시 다운로드해주세요.
+    echo   [ERROR] Python ZIP not found: %PYZIP%
+    echo   Please re-download the project.
     pause
     exit /b 1
 )
 
 if not exist "%PYDEST%" mkdir "%PYDEST%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%PYZIP%' -DestinationPath '%PYDEST%' -Force"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath \"%PYZIP%\" -DestinationPath \"%PYDEST%\" -Force"
 
 if not exist "%PYDEST%\python.exe" (
-    echo   [ERROR] 압축 해제에 실패했습니다.
+    echo   [ERROR] Extraction failed.
     pause
     exit /b 1
 )
-echo   [OK] Python 설치 완료
+echo   [OK] Python installed.
 
-REM === 3. pip 활성화 ===
+REM === 3. Install pip ===
 echo.
-echo [3/5] pip 설치 중... (잠시 기다려주세요)
+echo [3/5] Installing pip...
 
-REM embeddable Python에서 pip을 쓰려면 ._pth 파일에 import site 추가
+REM Enable pip in embeddable Python
 for %%f in ("%PYDEST%\python*._pth") do (
     findstr /C:"import site" "%%f" >nul 2>&1
     if errorlevel 1 (
@@ -67,34 +61,33 @@ for %%f in ("%PYDEST%\python*._pth") do (
 set "GETPIP=%~dp0tools\python-win64\get-pip.py"
 "%PYDEST%\python.exe" "%GETPIP%" --no-warn-script-location >nul 2>&1
 if %errorlevel% neq 0 (
-    echo   [ERROR] pip 설치 실패
+    echo   [ERROR] pip install failed.
     pause
     exit /b 1
 )
-echo   [OK] pip 설치 완료
+echo   [OK] pip installed.
 
-REM 이후 python/pip 명령은 내장 python 사용
 set "PATH=%PYDEST%;%PYDEST%\Scripts;%PATH%"
 
 goto :install_packages
 
 :install_packages
-REM === 4. 패키지 설치 ===
+REM === 4. Install packages ===
 echo.
-echo [4/5] 필요한 패키지 설치 중... (처음에는 2-3분 걸립니다)
+echo [4/5] Installing packages... (this may take 2-3 minutes)
 
 pip install -r "%~dp0requirements.txt" --no-warn-script-location >nul 2>&1
 if %errorlevel% neq 0 (
-    echo   일부 패키지 설치 실패. 기본 패키지만 설치합니다...
+    echo   Some packages failed. Installing core packages only...
     pip install pymupdf ezdxf python-frontmatter pyyaml click rich --no-warn-script-location >nul 2>&1
-    echo   [WARN] 기본 패키지만 설치됨. RAG/LLM 기능은 나중에 추가 설치 필요.
+    echo   [WARN] Core packages only. RAG/LLM features need manual install later.
 ) else (
-    echo   [OK] 모든 패키지 설치 완료
+    echo   [OK] All packages installed.
 )
 
-REM === 5. 폴더 생성 ===
+REM === 5. Create folders ===
 echo.
-echo [5/5] 폴더 구조 생성 중...
+echo [5/5] Creating folders...
 
 if not exist "%~dp0data\cache" mkdir "%~dp0data\cache"
 if not exist "%~dp0data\chroma_db" mkdir "%~dp0data\chroma_db"
@@ -104,26 +97,24 @@ if not exist "%~dp0in_progress" mkdir "%~dp0in_progress"
 if not exist "%~dp0reports" mkdir "%~dp0reports"
 if not exist "%~dp0logs" mkdir "%~dp0logs"
 
-echo   [OK] 폴더 생성 완료
+echo   [OK] Folders created.
 
-REM === 완료 ===
+REM === Done ===
 echo.
 echo  ========================================
-echo   설치 완료!
+echo   Setup Complete!
 echo  ========================================
 echo.
-echo  사용법:
-echo    1. AutoCAD에서 도면을 DXF로 저장하세요
-echo       (Ctrl+Shift+S - 파일 형식: DXF)
+echo  How to use:
+echo    1. Save your drawing as DXF in AutoCAD
+echo       (Ctrl+Shift+S - File type: DXF)
 echo.
-echo    2. Claude에게 DXF 파일을 주고 말하세요:
-echo       "이 도면 검토해줘"
+echo    2. Tell Claude:
+echo       "review this drawing" + attach DXF file
 echo.
-echo    3. 또는 직접 실행:
 if exist "%~dp0python\python.exe" (
-echo       python\python.exe run_review.py 도면파일.dxf
-) else (
-echo       python run_review.py 도면파일.dxf
+echo    3. Or run directly:
+echo       python\python.exe run_review.py your_drawing.dxf
 )
 echo.
 pause
